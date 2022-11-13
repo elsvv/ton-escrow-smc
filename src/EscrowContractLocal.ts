@@ -94,7 +94,7 @@ export class EscrowLocal {
   }
 
   static createGetInfoBody(queryId: number = 0) {
-    return new Builder().storeUint(OpCodes.reject, 32).storeUint(queryId, 64).endCell();
+    return new Builder().storeUint(OpCodes.get_info_onchain, 32).storeUint(queryId, 64).endCell();
   }
 
   static createTopUpBody() {

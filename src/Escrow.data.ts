@@ -34,6 +34,22 @@ export function buildEscrowDataCell({
   return dataCell;
 }
 
+export function parseEscrowDataCell(data: Cell) {
+  const cs = data.beginParse();
+
+  const guarantorSlice = cs.readCell().beginParse();
+
+  return {
+    inited: cs.readUint(1),
+    fullPrice: cs.readCoins(),
+    buyerAddress: cs.readAddress(),
+    sellerAddress: cs.readAddress(),
+    orderId: cs.readUint(64),
+    guarantorAddress: guarantorSlice.readAddress(),
+    guarantorRoyalty: guarantorSlice.readCoins(),
+  };
+}
+
 export function buildEscrowStateInit(
   data: Omit<EscrowData, "guarantorRoyalty" | "fullPrice">,
   code?: Cell

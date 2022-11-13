@@ -1,7 +1,7 @@
 import { BN } from "bn.js";
 import { Cell, InternalMessage, toNano } from "ton";
 import { SendMsgAction, TvmRunnerAsynchronous } from "ton-contract-executor";
-import { EscrowData } from "./Escrow.data";
+import { EscrowData, parseEscrowDataCell } from "./Escrow.data";
 import { compileEscrowCode } from "./Escrow.source";
 import { ErrorCodes, EscrowLocal, OpCodes } from "./EscrowContractLocal";
 import { createIntMsgBody, createAdresses, parseIntOutmsg } from "./utils";
@@ -15,12 +15,13 @@ const defaultConfig: EscrowData = {
 
 describe("Escrow smc", () => {
   let codeCell: Cell;
+
   beforeAll(async () => {
     const res = await compileEscrowCode();
     codeCell = res!.codeCell;
   });
 
-  it("should return escrow info", async () => {
+  it("should return escrow of-chain info", async () => {
     const escrow = await EscrowLocal.createFromConfig(defaultConfig, codeCell);
     let res = await escrow.getInfo();
 
@@ -32,7 +33,7 @@ describe("Escrow smc", () => {
     expect(res.orderId.toString()).toEqual(defaultConfig.orderId.toString(10));
   });
 
-  it("Should be inited only by buyer", async () => {
+  it("Should be inited only by a buyer", async () => {
     const addresses = createAdresses();
 
     const escrow = await EscrowLocal.createFromConfig(
@@ -78,7 +79,56 @@ describe("Escrow smc", () => {
     expect(info2.inited.eq(new BN(1))).toBe(true);
   });
 
-  it("Should accept deal correctly", async () => {
+  it("Should be accepted or rejected only by a guarantor", async () => {
+    const addresses = createAdresses();
+    const escrow = await EscrowLocal.createFromConfig(
+      {
+        ...defaultConfig,
+        ...addresses,
+      },
+      codeCell
+    );
+
+    const fullPrice = toNano(1);
+    const guarantorRoyalty = toNano(0.2);
+
+    const msg1 = new InternalMessage({
+      from: addresses.buyerAddress,
+      to: escrow.address,
+      value: toNano(1.3),
+      bounce: false,
+      body: createIntMsgBody(EscrowLocal.createDeployBody({ fullPrice, guarantorRoyalty })),
+    });
+    msg1.writeTo(new Cell());
+    await escrow.contract.sendInternalMessage(msg1);
+    escrow.contract.setBalance(toNano(1.3));
+
+    const msg2 = new InternalMessage({
+      from: addresses.sellerAddress,
+      to: escrow.address,
+      value: toNano(0.1),
+      bounce: true,
+      body: createIntMsgBody(EscrowLocal.createAcceptBody()),
+    });
+    msg2.writeTo(new Cell());
+
+    const res2 = await escrow.contract.sendInternalMessage(msg2);
+    expect(res2.exit_code).toEqual(ErrorCodes.not_a_guarantor);
+
+    const msg3 = new InternalMessage({
+      from: addresses.buyerAddress,
+      to: escrow.address,
+      value: toNano(0.1),
+      bounce: true,
+      body: createIntMsgBody(EscrowLocal.createRejectBody()),
+    });
+    msg3.writeTo(new Cell());
+
+    const res3 = await escrow.contract.sendInternalMessage(msg3);
+    expect(res3.exit_code).toEqual(ErrorCodes.not_a_guarantor);
+  });
+
+  it("Should accept deal", async () => {
     const addresses = createAdresses();
     const escrow = await EscrowLocal.createFromConfig(
       {
@@ -102,7 +152,7 @@ describe("Escrow smc", () => {
     const res1 = await escrow.contract.sendInternalMessage(msg1);
     expect(res1.exit_code).toEqual(0);
 
-    await escrow.contract.setBalance(toNano(1.3));
+    escrow.contract.setBalance(toNano(1.3));
 
     const msg2 = new InternalMessage({
       from: addresses.guarantorAddress,
@@ -140,6 +190,119 @@ describe("Escrow smc", () => {
       OpCodes.success_buyer_notification
     );
   });
+
+  it("Should reject deal", async () => {
+    const addresses = createAdresses();
+    const escrow = await EscrowLocal.createFromConfig(
+      {
+        ...defaultConfig,
+        ...addresses,
+      },
+      codeCell
+    );
+
+    const fullPrice = toNano(1);
+    const guarantorRoyalty = toNano(0.2);
+
+    const msg1 = new InternalMessage({
+      from: addresses.buyerAddress,
+      to: escrow.address,
+      value: toNano(1.3),
+      bounce: false,
+      body: createIntMsgBody(EscrowLocal.createDeployBody({ fullPrice, guarantorRoyalty })),
+    });
+    msg1.writeTo(new Cell());
+    await escrow.contract.sendInternalMessage(msg1);
+
+    escrow.contract.setBalance(toNano(1.3));
+
+    const msg2 = new InternalMessage({
+      from: addresses.guarantorAddress,
+      to: escrow.address,
+      value: toNano(0.1),
+      bounce: true,
+      body: createIntMsgBody(EscrowLocal.createRejectBody()),
+    });
+    msg2.writeTo(new Cell());
+
+    const res2 = await escrow.contract.sendInternalMessage(msg2);
+    expect(res2.exit_code).toEqual(0);
+    expect(res2.actionList.length).toBe(3);
+
+    const guarantorAction = parseIntOutmsg(res2.actionList[0] as SendMsgAction);
+    expect(guarantorAction.type).toEqual("send_msg");
+    expect(guarantorAction.mode).toEqual(64);
+    expect(guarantorAction.body.beginParse().readUint(32).toNumber()).toEqual(
+      OpCodes.reject_guarantor_notification
+    );
+    // TODO: find out why there are wrong coin values
+    // console.log("guarantorAction.coins", guarantorAction.coins.toString(10));
+
+    const sellerAction = parseIntOutmsg(res2.actionList[1] as SendMsgAction);
+    expect(sellerAction.type).toEqual("send_msg");
+    expect(sellerAction.mode).toEqual(1);
+    expect(sellerAction.body.beginParse().readUint(32).toNumber()).toEqual(
+      OpCodes.reject_seller_notification
+    );
+
+    const buyerAction = parseIntOutmsg(res2.actionList[2] as SendMsgAction);
+    expect(buyerAction.type).toEqual("send_msg");
+    expect(buyerAction.mode).toEqual(128 + 32);
+    expect(buyerAction.body.beginParse().readUint(32).toNumber()).toEqual(
+      OpCodes.reject_buyer_notification
+    );
+    // TODO: find out why there are wrong coin values
+    // console.log("buyerAction.coins", buyerAction.coins.toString(10));
+    // expect(buyerAction.coins.gt(fullPrice)).toBe(true);
+  });
+
+  // it("should return escrow on-chain info", async () => {
+  //   const addresses = createAdresses();
+  //   const escrow = await EscrowLocal.createFromConfig({ ...defaultConfig, ...addresses }, codeCell);
+
+  //   const _fullPrice = toNano(1);
+  //   const _guarantorRoyalty = toNano(0.2);
+
+  //   const msg1 = new InternalMessage({
+  //     from: addresses.buyerAddress,
+  //     to: escrow.address,
+  //     value: toNano(1.3),
+  //     bounce: false,
+  //     body: createIntMsgBody(
+  //       EscrowLocal.createDeployBody({ fullPrice: _fullPrice, guarantorRoyalty: _guarantorRoyalty })
+  //     ),
+  //   });
+  //   msg1.writeTo(new Cell());
+  //   await escrow.contract.sendInternalMessage(msg1);
+
+  //   escrow.contract.setBalance(toNano(1.3));
+
+  //   const msg = new InternalMessage({
+  //     from: addresses.guarantorAddress,
+  //     to: escrow.address,
+  //     value: toNano(0.1),
+  //     bounce: true,
+  //     body: createIntMsgBody(EscrowLocal.createGetInfoBody(777)),
+  //   });
+  //   msg.writeTo(new Cell());
+
+  //   const res = await escrow.contract.sendInternalMessage(msg);
+  //   expect(res.exit_code).toEqual(0);
+  //   expect(res.actionList.length).toBe(1);
+
+  //   const infoAction = parseIntOutmsg(res.actionList[0] as SendMsgAction);
+  //   const { buyerAddress, sellerAddress, guarantorAddress, fullPrice, guarantorRoyalty, orderId } =
+  //     parseEscrowDataCell(infoAction.body.beginParse().readCell());
+
+  //   let res2 = await escrow.getInfo();
+
+  //   expect(res2.buyerAddress.toFriendly()).toEqual(buyerAddress!.toFriendly());
+  //   expect(res2.sellerAddress.toFriendly()).toEqual(sellerAddress!.toFriendly());
+  //   expect(res2.guarantorAddress.toFriendly()).toEqual(guarantorAddress!.toFriendly());
+  //   expect(res2.fullPrice.eq(fullPrice)).toBe(true);
+  //   expect(res2.royalty.eq(guarantorRoyalty)).toBe(true);
+  //   expect(res2.orderId.toString()).toEqual(orderId.toString(10));
+  // });
 
   afterAll(async () => {
     await TvmRunnerAsynchronous.getShared().cleanup(); // close all opened threads
