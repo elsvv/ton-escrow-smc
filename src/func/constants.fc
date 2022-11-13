@@ -24,5 +24,5 @@ const int send_mode::destroy_if_zero = 32;
 const int send_mode::carry_remaining_value = 64;
 const int send_mode::carry_remaining_balance = 128;
 
-const int min_gas_amount = 50000000; ;; 0.05 TON
-const int min_deploy_gas_amount = 500000000; ;; 0.05 TON
+const int min_gas_amount = 20000000; ;; 0.02 TON
+const int min_deploy_gas_amount = 50000000; ;; 0.05 TON

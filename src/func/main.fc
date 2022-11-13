@@ -50,8 +50,7 @@
 
   ifnot (inited?) { ;; handle deploy
     throw_unless(er::not_a_buyer, equal_slice_bits(sender_addr, buyer_addr));
-    (int _full_price, int royalty) = (cs~load_coins(), cs~load_coins());
-    ;; throw_unless(er::min_gas_amount, msg_value >= min_deploy_gas_amount);
+    (int _full_price, int royalty) = (in_msg_body~load_coins(), in_msg_body~load_coins());
 
     (slice guarantor_addr, _) = unpack_guarantor_data(guarantor_data);
     cell _guarantor_data = pack_guarantor_data(guarantor_addr, royalty);
@@ -84,8 +83,7 @@
   if (op == op::accept) {
     (slice guarantor_addr, int royalty) = unpack_guarantor_data(guarantor_data);
     throw_unless(er::not_a_guarantor, equal_slice_bits(sender_addr, guarantor_addr));
-    int balance = pair_first(get_balance());
-    throw_unless(er::min_gas_amount, balance + msg_value >= full_price + min_gas_amount);
+    throw_if(er::min_gas_amount, my_balance < full_price + min_gas_amount);
 
     send_msg(seller_addr, full_price - royalty, op::success_seller_notification, send_mode::separate_gas);
 
