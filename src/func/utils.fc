@@ -1,0 +1,10 @@
+() send_msg(slice to_addr, int amount, int op, int mode) impure inline_ref {
+  var msg = begin_cell()
+        .store_uint(0x10, 6)
+        .store_slice(to_addr)
+        .store_grams(amount)
+        .store_uint(0, 107)
+        .store_uint(op, 32);
+
+  send_raw_message(msg.end_cell(), mode);
+}

@@ -1,0 +1,124 @@
+{-
+  currently all imports on the same level with main.fc file because of 'No such file or directory' error of func-js
+-}
+#include "stdlib.fc";
+#include "constants.fc";
+#include "utils.fc";
+
+(int, int, slice, slice, int, cell) load_data() inline_ref {
+  var cs = get_data().begin_parse();
+  return (
+    cs~load_uint(1), ;; inited?
+    cs~load_coins(), ;; full_price
+    cs~load_msg_addr(), ;; buyer
+    cs~load_msg_addr(), ;; seller
+    cs~load_uint(64), ;; order_id
+    cs~load_ref() ;; guarantor_data
+  );
+}
+
+() save_data(int full_price, slice buyer_addr, slice seller_addr, int order_id, cell guarantor_data) impure inline {
+  set_data(begin_cell()
+    .store_uint(1, 1)
+    .store_coins(full_price)
+    .store_slice(buyer_addr)
+    .store_slice(seller_addr)
+    .store_uint(order_id, 64)
+    .store_ref(guarantor_data)
+    .end_cell()
+  );
+}
+
+(cell) pack_guarantor_data(slice g_addr, int g_royalty) inline_ref {
+  return begin_cell().store_slice(g_addr).store_coins(g_royalty).end_cell();
+}
+
+(slice, int) unpack_guarantor_data(cell data) inline_ref {
+  slice cs = data.begin_parse();
+  return (cs~load_msg_addr(), cs~load_coins());
+}
+
+
+
+() recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
+  var cs = in_msg_full.begin_parse();
+
+  throw_if(0, cs~load_uint(4) & 1); ;; ignore bounce msgs
+
+  (int inited?, int full_price, slice buyer_addr, slice seller_addr, int order_id, cell guarantor_data) = load_data();
+  slice sender_addr = cs~load_msg_addr();
+
+  ifnot (inited?) { ;; handle deploy
+    throw_unless(er::not_a_buyer, equal_slice_bits(sender_addr, buyer_addr));
+    (int _full_price, int royalty) = (cs~load_coins(), cs~load_coins());
+    ;; throw_unless(er::min_gas_amount, msg_value >= min_deploy_gas_amount);
+
+    (slice guarantor_addr, _) = unpack_guarantor_data(guarantor_data);
+    cell _guarantor_data = pack_guarantor_data(guarantor_addr, royalty);
+
+    save_data(_full_price, buyer_addr, buyer_addr, order_id, _guarantor_data);
+    return ();
+  }
+  int op = in_msg_body~load_uint(32);
+
+  if (op == op::get_info_onchain) {
+    int query_id = cs~load_uint(64);
+
+    var msg = begin_cell()
+        .store_uint(0x10, 6)
+        .store_slice(sender_addr)
+        .store_grams(0)
+        .store_uint(1, 107)
+        .store_uint(op::get_info_response, 32)
+        .store_uint(query_id, 64)
+        .store_ref(get_data());
+    send_raw_message(msg.end_cell(), send_mode::carry_remaining_value);
+
+    return (); 
+  }
+
+  if (op == op::top_up) { ;; top up balance
+    return ();
+  }
+
+  if (op == op::accept) {
+    (slice guarantor_addr, int royalty) = unpack_guarantor_data(guarantor_data);
+    throw_unless(er::not_a_guarantor, equal_slice_bits(sender_addr, guarantor_addr));
+    int balance = pair_first(get_balance());
+    throw_unless(er::min_gas_amount, balance + msg_value >= full_price + min_gas_amount);
+
+    send_msg(seller_addr, full_price - royalty, op::success_seller_notification, send_mode::separate_gas);
+
+    if (royalty) {
+      send_msg(guarantor_addr, royalty, op::success_guarantor_notification, send_mode::separate_gas);
+    }
+    send_msg(buyer_addr, 0, op::success_buyer_notification, send_mode::carry_remaining_balance + send_mode::destroy_if_zero);
+
+    return (); 
+  }
+
+  if (op == op::reject) {
+    (slice guarantor_addr, _) = unpack_guarantor_data(guarantor_data);
+    throw_unless(er::not_a_guarantor, equal_slice_bits(sender_addr, guarantor_addr));
+    throw_unless(er::min_gas_amount, msg_value >= min_gas_amount);
+
+    send_msg(guarantor_addr, 0, op::reject_guarantor_notification, send_mode::carry_remaining_value);
+    send_msg(seller_addr, 1, op::reject_seller_notification, send_mode::separate_gas);
+    send_msg(buyer_addr, 0, op::reject_buyer_notification, send_mode::carry_remaining_balance + send_mode::destroy_if_zero);
+
+    return (); 
+  }
+
+  throw(0xffff);
+}
+
+() recv_external(slice in_msg) impure {
+  ;; deploying only by internal messages
+}
+
+_ get_info() method_id {
+  (int inited?, int full_price, slice buyer_addr, slice seller_addr, int order_id, cell guarantor_data) = load_data();
+  (slice guarantor_addr, int royalty?) = unpack_guarantor_data(guarantor_data);
+
+  return (inited?, full_price, order_id, buyer_addr, seller_addr, guarantor_addr, royalty?);
+}

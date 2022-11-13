@@ -1,0 +1,28 @@
+;; Opcodes:
+const op::top_up = 1;
+const op::accept = 2;
+const op::reject = 3;
+const op::get_info_onchain = 10;
+const op::get_info_response = 11;
+const op::success_guarantor_notification = 20;
+const op::success_buyer_notification = 21;
+const op::success_seller_notification = 22;
+const op::reject_guarantor_notification = 30;
+const op::reject_buyer_notification = 31;
+const op::reject_seller_notification = 32;
+
+;; Error codes: 
+const er::not_a_buyer = 501;
+const er::not_a_guarantor = 502;
+const er::min_gas_amount = 503;
+
+;; send_raw_message send modes:
+const int send_mode::default = 0;
+const int send_mode::separate_gas = 1;
+const int send_mode::ignore_errors = 2;
+const int send_mode::destroy_if_zero = 32;
+const int send_mode::carry_remaining_value = 64;
+const int send_mode::carry_remaining_balance = 128;
+
+const int min_gas_amount = 50000000; ;; 0.05 TON
+const int min_deploy_gas_amount = 500000000; ;; 0.05 TON
