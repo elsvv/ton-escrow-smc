@@ -4,7 +4,7 @@ import { SendMsgAction, TvmRunnerAsynchronous } from "ton-contract-executor";
 import { EscrowData, parseEscrowDataCell } from "./Escrow.data";
 import { compileEscrowCode } from "./Escrow.source";
 import { ErrorCodes, EscrowLocal, OpCodes } from "./EscrowContractLocal";
-import { createIntMsgBody, createAdresses, parseIntOutmsg } from "./utils";
+import { createAdresses, parseIntOutmsg } from "./utils";
 
 const defaultConfig: EscrowData = {
   ...createAdresses(),
@@ -44,35 +44,23 @@ describe("Escrow smc", () => {
       codeCell
     );
 
-    const msg1 = new InternalMessage({
+    const res1 = await escrow.sendMsg({
       from: addresses.guarantorAddress,
-      to: escrow.address,
       value: toNano(1),
       bounce: false,
-      body: createIntMsgBody(
-        EscrowLocal.createDeployBody({ fullPrice: toNano(1), guarantorRoyalty: toNano(0.2) })
-      ),
+      body: EscrowLocal.createDeployBody({ fullPrice: toNano(1), guarantorRoyalty: toNano(0.2) }),
     });
-
-    msg1.writeTo(new Cell());
-    const res1 = await escrow.contract.sendInternalMessage(msg1);
     expect(res1.exit_code).toEqual(ErrorCodes.not_a_buyer);
 
     let info1 = await escrow.getInfo();
     expect(info1.inited.eq(new BN(0))).toBe(true);
 
-    const msg2 = new InternalMessage({
+    const res = await escrow.sendMsg({
       from: addresses.buyerAddress,
-      to: escrow.address,
       value: toNano(1),
       bounce: false,
-      body: createIntMsgBody(
-        EscrowLocal.createDeployBody({ fullPrice: toNano(1), guarantorRoyalty: toNano(0.2) })
-      ),
+      body: EscrowLocal.createDeployBody({ fullPrice: toNano(1), guarantorRoyalty: toNano(0.2) }),
     });
-
-    msg2.writeTo(new Cell());
-    const res = await escrow.contract.sendInternalMessage(msg2);
     expect(res.exit_code).toEqual(0);
 
     let info2 = await escrow.getInfo();
@@ -92,39 +80,28 @@ describe("Escrow smc", () => {
     const fullPrice = toNano(1);
     const guarantorRoyalty = toNano(0.2);
 
-    const msg1 = new InternalMessage({
+    await escrow.sendMsg({
       from: addresses.buyerAddress,
-      to: escrow.address,
       value: toNano(1.3),
       bounce: false,
-      body: createIntMsgBody(EscrowLocal.createDeployBody({ fullPrice, guarantorRoyalty })),
+      body: EscrowLocal.createDeployBody({ fullPrice, guarantorRoyalty }),
     });
-    msg1.writeTo(new Cell());
-    await escrow.contract.sendInternalMessage(msg1);
     escrow.contract.setBalance(toNano(1.3));
 
-    const msg2 = new InternalMessage({
+    const res2 = await escrow.sendMsg({
       from: addresses.sellerAddress,
-      to: escrow.address,
       value: toNano(0.1),
       bounce: true,
-      body: createIntMsgBody(EscrowLocal.createAcceptBody()),
+      body: EscrowLocal.createAcceptBody(),
     });
-    msg2.writeTo(new Cell());
-
-    const res2 = await escrow.contract.sendInternalMessage(msg2);
     expect(res2.exit_code).toEqual(ErrorCodes.not_a_guarantor);
 
-    const msg3 = new InternalMessage({
+    const res3 = await escrow.sendMsg({
       from: addresses.buyerAddress,
-      to: escrow.address,
       value: toNano(0.1),
       bounce: true,
-      body: createIntMsgBody(EscrowLocal.createRejectBody()),
+      body: EscrowLocal.createRejectBody(),
     });
-    msg3.writeTo(new Cell());
-
-    const res3 = await escrow.contract.sendInternalMessage(msg3);
     expect(res3.exit_code).toEqual(ErrorCodes.not_a_guarantor);
   });
 
@@ -141,29 +118,22 @@ describe("Escrow smc", () => {
     const fullPrice = toNano(1);
     const guarantorRoyalty = toNano(0.2);
 
-    const msg1 = new InternalMessage({
+    const res1 = await escrow.sendMsg({
       from: addresses.buyerAddress,
-      to: escrow.address,
       value: toNano(1.3),
       bounce: false,
-      body: createIntMsgBody(EscrowLocal.createDeployBody({ fullPrice, guarantorRoyalty })),
+      body: EscrowLocal.createDeployBody({ fullPrice, guarantorRoyalty }),
     });
-    msg1.writeTo(new Cell());
-    const res1 = await escrow.contract.sendInternalMessage(msg1);
     expect(res1.exit_code).toEqual(0);
 
     escrow.contract.setBalance(toNano(1.3));
 
-    const msg2 = new InternalMessage({
+    const res2 = await escrow.sendMsg({
       from: addresses.guarantorAddress,
-      to: escrow.address,
       value: toNano(0.1),
       bounce: true,
-      body: createIntMsgBody(EscrowLocal.createAcceptBody()),
+      body: EscrowLocal.createAcceptBody(),
     });
-    msg2.writeTo(new Cell());
-
-    const res2 = await escrow.contract.sendInternalMessage(msg2);
     expect(res2.exit_code).toEqual(0);
     expect(res2.actionList.length).toBe(3);
 
@@ -204,28 +174,22 @@ describe("Escrow smc", () => {
     const fullPrice = toNano(1);
     const guarantorRoyalty = toNano(0.2);
 
-    const msg1 = new InternalMessage({
+    const res1 = await escrow.sendMsg({
       from: addresses.buyerAddress,
-      to: escrow.address,
       value: toNano(1.3),
       bounce: false,
-      body: createIntMsgBody(EscrowLocal.createDeployBody({ fullPrice, guarantorRoyalty })),
+      body: EscrowLocal.createDeployBody({ fullPrice, guarantorRoyalty }),
     });
-    msg1.writeTo(new Cell());
-    await escrow.contract.sendInternalMessage(msg1);
+    expect(res1.exit_code).toEqual(0);
 
     escrow.contract.setBalance(toNano(1.3));
 
-    const msg2 = new InternalMessage({
+    const res2 = await escrow.sendMsg({
       from: addresses.guarantorAddress,
-      to: escrow.address,
       value: toNano(0.1),
       bounce: true,
-      body: createIntMsgBody(EscrowLocal.createRejectBody()),
+      body: EscrowLocal.createRejectBody(),
     });
-    msg2.writeTo(new Cell());
-
-    const res2 = await escrow.contract.sendInternalMessage(msg2);
     expect(res2.exit_code).toEqual(0);
     expect(res2.actionList.length).toBe(3);
 

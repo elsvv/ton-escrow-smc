@@ -6,11 +6,6 @@ export * from "./files";
 
 export const randomAddress = (workchain: number = 0) => new Address(workchain, randomBytes(32));
 
-export const createIntMsgBody = (cell: Cell) =>
-  new CommonMessageInfo({
-    body: new CellMessage(cell),
-  });
-
 export const createAdresses = () => ({
   buyerAddress: randomAddress(),
   sellerAddress: randomAddress(),

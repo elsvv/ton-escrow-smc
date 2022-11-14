@@ -1,5 +1,14 @@
 import { SmartContract } from "ton-contract-executor";
-import { Address, Builder, Cell, contractAddress, Slice } from "ton";
+import {
+  Address,
+  Builder,
+  Cell,
+  CellMessage,
+  CommonMessageInfo,
+  contractAddress,
+  InternalMessage,
+  Slice,
+} from "ton";
 import BN from "bn.js";
 
 import { compileEscrowCode } from "./Escrow.source";
@@ -52,6 +61,23 @@ export class EscrowLocal {
       buyerAddress: buyer_addr.readAddress()!,
       sellerAddress: seller_addr.readAddress()!,
     };
+  }
+
+  async sendMsg(params: { from: Address; body: Cell; bounce: boolean; value: BN }) {
+    const msg = new InternalMessage({
+      from: params.from,
+      to: this.address,
+      value: params.value,
+      bounce: params.bounce,
+      body: new CommonMessageInfo({
+        body: new CellMessage(params.body),
+      }),
+    });
+
+    const msgCell = new Cell();
+    msg.writeTo(msgCell);
+
+    return this.contract.sendInternalMessage(msg);
   }
 
   static async createFromConfig(config: EscrowData, codeCell?: Cell) {
