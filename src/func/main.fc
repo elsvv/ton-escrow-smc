@@ -55,7 +55,7 @@
     (slice guarantor_addr, _) = unpack_guarantor_data(guarantor_data);
     cell _guarantor_data = pack_guarantor_data(guarantor_addr, royalty);
 
-    save_data(_full_price, buyer_addr, buyer_addr, order_id, _guarantor_data);
+    save_data(_full_price, buyer_addr, seller_addr, order_id, _guarantor_data);
     return ();
   }
   int op = in_msg_body~load_uint(32);

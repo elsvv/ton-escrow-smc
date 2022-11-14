@@ -139,6 +139,7 @@ describe("Escrow smc", () => {
 
     const sellerAction = parseIntOutmsg(res2.actionList[0] as SendMsgAction);
     expect(sellerAction.type).toEqual("send_msg");
+    expect(sellerAction.dest.toString()).toEqual(addresses.sellerAddress.toString());
     expect(sellerAction.mode).toEqual(1);
     expect(sellerAction.body.beginParse().readUint(32).toNumber()).toEqual(
       OpCodes.success_seller_notification
@@ -147,6 +148,7 @@ describe("Escrow smc", () => {
 
     const guarantorAction = parseIntOutmsg(res2.actionList[1] as SendMsgAction);
     expect(guarantorAction.type).toEqual("send_msg");
+    expect(guarantorAction.dest.toString()).toEqual(addresses.guarantorAddress.toString());
     expect(guarantorAction.mode).toEqual(1);
     expect(guarantorAction.body.beginParse().readUint(32).toNumber()).toEqual(
       OpCodes.success_guarantor_notification
@@ -155,6 +157,7 @@ describe("Escrow smc", () => {
 
     const buyerAction = parseIntOutmsg(res2.actionList[2] as SendMsgAction);
     expect(buyerAction.type).toEqual("send_msg");
+    expect(buyerAction.dest.toString()).toEqual(addresses.buyerAddress.toString());
     expect(buyerAction.mode).toEqual(128 + 32);
     expect(buyerAction.body.beginParse().readUint(32).toNumber()).toEqual(
       OpCodes.success_buyer_notification

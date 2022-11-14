@@ -1,4 +1,4 @@
-import { Address, Cell, CellMessage, CommonMessageInfo } from "ton";
+import { Address } from "ton";
 import { randomBytes } from "crypto";
 import { SendMsgAction } from "ton-contract-executor";
 
@@ -23,5 +23,5 @@ export function parseIntOutmsg(msg: SendMsgAction) {
     throw new Error("This is an external-out message");
   }
 
-  return { type, mode, body, coins: info.value.coins };
+  return { type, mode, body, coins: info.value.coins, dest: info.dest };
 }
