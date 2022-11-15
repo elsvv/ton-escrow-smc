@@ -114,7 +114,7 @@
   ;; deploying only by internal messages
 }
 
-_ get_info() method_id {
+(int, int, int, slice, slice, slice, int) get_info() method_id {
   (int inited?, int full_price, slice buyer_addr, slice seller_addr, int order_id, cell guarantor_data) = load_data();
   (slice guarantor_addr, int royalty?) = unpack_guarantor_data(guarantor_data);
 
