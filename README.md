@@ -1,6 +1,44 @@
 # TON Escrow smart contract
 
-This repo contains func code, ts tests and related scripts for a simple escrow smart-contract.
+This repo contains func code, ts-based tests and related scripts for a simple escrow smart-contract.
+
+### Logic description
+
+Escrow contract allows to create an offer from a buyer to a seller. After a creation third party (guarantor) validates the offer. Validation could be made both onchain & offchain.
+
+Then the guarantor can send a message with an `accept` op-code. It will cause closing of an offer, sending money to a seller and (if any) sending royalties to the guarantor.
+
+The guarantor can send `reject` op-code and close an offer as well.
+
+Each of these op-codes is accompanied by others related notify op-codes.
+
+### Deployment
+
+Deployment of new contracts is done through internal messages only. External messages are quite difficult to handle without some extra protection to avoid unintended money spending.
+
+Contracts' records of `full_price` and `royalty` are stored only after a deployment to keep a smart-contract's address discoverable by only knowing `buyer_address`, `seller_address`, `guarantor_address` and `order_id` data records.
+
+## Enviiroment
+
+### Install typescript enviroment:
+
+```sh
+yarn
+```
+
+### Run tests:
+
+```sh
+yarn test
+```
+
+### Compile and print an actual code BOC:
+
+```sh
+yarn compile
+```
+
+---
 
 Frontend code for handling contract operations can be found [here](https://github.com/elsvv/ton-escrow-web)
 
