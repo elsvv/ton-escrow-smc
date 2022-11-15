@@ -1,5 +1,5 @@
 import { BN } from "bn.js";
-import { Cell, InternalMessage, toNano } from "ton";
+import { Cell, toNano } from "ton";
 import { SendMsgAction, TvmRunnerAsynchronous } from "ton-contract-executor";
 import { EscrowData, parseEscrowDataCell } from "./Escrow.data";
 import { compileEscrowCode } from "./Escrow.source";
@@ -223,53 +223,55 @@ describe("Escrow smc", () => {
     // expect(buyerAction.coins.gt(fullPrice)).toBe(true);
   });
 
-  // it("should return escrow on-chain info", async () => {
-  //   const addresses = createAdresses();
-  //   const escrow = await EscrowLocal.createFromConfig({ ...defaultConfig, ...addresses }, codeCell);
+  it("should return escrow on-chain info", async () => {
+    const addresses = createAdresses();
+    const escrow = await EscrowLocal.createFromConfig({ ...defaultConfig, ...addresses }, codeCell);
 
-  //   const _fullPrice = toNano(1);
-  //   const _guarantorRoyalty = toNano(0.2);
+    const _fullPrice = toNano(1);
+    const _guarantorRoyalty = toNano(0.2);
 
-  //   const msg1 = new InternalMessage({
-  //     from: addresses.buyerAddress,
-  //     to: escrow.address,
-  //     value: toNano(1.3),
-  //     bounce: false,
-  //     body: createIntMsgBody(
-  //       EscrowLocal.createDeployBody({ fullPrice: _fullPrice, guarantorRoyalty: _guarantorRoyalty })
-  //     ),
-  //   });
-  //   msg1.writeTo(new Cell());
-  //   await escrow.contract.sendInternalMessage(msg1);
+    await escrow.sendMsg({
+      from: addresses.buyerAddress,
+      value: toNano(1.3),
+      bounce: false,
+      body: EscrowLocal.createDeployBody({
+        fullPrice: _fullPrice,
+        guarantorRoyalty: _guarantorRoyalty,
+      }),
+    });
 
-  //   escrow.contract.setBalance(toNano(1.3));
+    escrow.contract.setBalance(toNano(1.3));
 
-  //   const msg = new InternalMessage({
-  //     from: addresses.guarantorAddress,
-  //     to: escrow.address,
-  //     value: toNano(0.1),
-  //     bounce: true,
-  //     body: createIntMsgBody(EscrowLocal.createGetInfoBody(777)),
-  //   });
-  //   msg.writeTo(new Cell());
+    const queryId = 777;
 
-  //   const res = await escrow.contract.sendInternalMessage(msg);
-  //   expect(res.exit_code).toEqual(0);
-  //   expect(res.actionList.length).toBe(1);
+    const res2 = await escrow.sendMsg({
+      from: addresses.guarantorAddress,
+      bounce: true,
+      value: toNano(0.1),
+      body: EscrowLocal.createGetInfoBody(queryId),
+    });
 
-  //   const infoAction = parseIntOutmsg(res.actionList[0] as SendMsgAction);
-  //   const { buyerAddress, sellerAddress, guarantorAddress, fullPrice, guarantorRoyalty, orderId } =
-  //     parseEscrowDataCell(infoAction.body.beginParse().readCell());
+    expect(res2.exit_code).toEqual(0);
+    expect(res2.actionList.length).toBe(1);
 
-  //   let res2 = await escrow.getInfo();
+    const infoAction = parseIntOutmsg(res2.actionList[0] as SendMsgAction);
 
-  //   expect(res2.buyerAddress.toFriendly()).toEqual(buyerAddress!.toFriendly());
-  //   expect(res2.sellerAddress.toFriendly()).toEqual(sellerAddress!.toFriendly());
-  //   expect(res2.guarantorAddress.toFriendly()).toEqual(guarantorAddress!.toFriendly());
-  //   expect(res2.fullPrice.eq(fullPrice)).toBe(true);
-  //   expect(res2.royalty.eq(guarantorRoyalty)).toBe(true);
-  //   expect(res2.orderId.toString()).toEqual(orderId.toString(10));
-  // });
+    const msgSlice = infoAction.body.beginParse();
+    expect(msgSlice.readUint(32).toNumber()).toEqual(OpCodes.get_info_response);
+    expect(msgSlice.readUint(64).eq(new BN(queryId))).toBe(true);
+
+    const { buyerAddress, sellerAddress, guarantorAddress, fullPrice, guarantorRoyalty, orderId } =
+      parseEscrowDataCell(msgSlice.readCell());
+
+    let res3 = await escrow.getInfo();
+
+    expect(res3.buyerAddress.toFriendly()).toEqual(buyerAddress!.toFriendly());
+    expect(res3.sellerAddress.toFriendly()).toEqual(sellerAddress!.toFriendly());
+    expect(res3.guarantorAddress.toFriendly()).toEqual(guarantorAddress!.toFriendly());
+    expect(res3.fullPrice.eq(fullPrice)).toBe(true);
+    expect(res3.royalty.eq(guarantorRoyalty)).toBe(true);
+    expect(res3.orderId.toString()).toEqual(orderId.toString(10));
+  });
 
   afterAll(async () => {
     await TvmRunnerAsynchronous.getShared().cleanup(); // close all opened threads
