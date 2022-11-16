@@ -51,8 +51,8 @@ async function main() {
     bounceable: true,
   })}?${qs.stringify({
     amount: toNano("0.6").toString(10),
-    bin: body.toBoc({ idx: false }).toString("base64"),
-    init: stateInit.toBoc({ idx: false }).toString("base64"),
+    bin: body.toBoc({ idx: false }).toString("base64url"),
+    init: stateInit.toBoc({ idx: false }).toString("base64url"),
   })}`;
 
   console.log("link:\n---\n", link, "\n=====");
