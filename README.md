@@ -18,7 +18,7 @@ Deployment of new contracts is done through internal messages only. External mes
 
 Contracts' records of `full_price` and `royalty` are stored only after a deployment to keep a smart-contract's address discoverable by only knowing `buyer_address`, `seller_address`, `guarantor_address` and `order_id` data records.
 
-## Enviiroment
+## Environment
 
 ### Install typescript enviroment:
 
