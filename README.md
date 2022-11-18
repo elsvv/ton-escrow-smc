@@ -12,6 +12,24 @@ The guarantor can send `reject` op-code and close an offer as well.
 
 Each of these op-codes is accompanied by others related notify op-codes.
 
+### Contract data
+
+The TL-B contract storage scheme is shown below:
+
+```
+guarantor_data#_
+  guarantor_address:MsgAddress guarantor_royalty:Coins = GuarantorData;
+
+storage#_
+  inited:uint1
+  full_price:Coins
+  buyer:MsgAddress
+  seller:MsgAddress
+  order_id:uint64
+  guarantor_data:^GuarantorData
+  = Storage;
+```
+
 ### Deployment
 
 Deployment of new contracts is done through internal messages only. External messages are quite difficult to handle without some extra protection to avoid unintended money spending.
