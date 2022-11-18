@@ -5,6 +5,12 @@
 #include "constants.fc";
 #include "utils.fc";
 
+{-
+  storage scheme:
+
+  guarantor_data#_ guarantor_address:MsgAddress guarantor_royalty:Coins = GuarantorData;
+  storage#_ inited:uint1 full_price:Coins buyer:MsgAddress seller:MsgAddress order_id:uint64 guarantor_data:^GuarantorData = Storage;
+-}
 (int, int, slice, slice, int, cell) load_data() inline_ref {
   var cs = get_data().begin_parse();
   return (
