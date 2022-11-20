@@ -38,7 +38,7 @@ Contracts' records of `full_price` and `royalty` are stored only after a deploym
 
 ## Environment
 
-### Install typescript enviroment:
+### Install typescript environment:
 
 ```sh
 yarn
