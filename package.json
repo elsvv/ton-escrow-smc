@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "compile": "ts-node scripts/compile",
+    "build": "ts-node scripts/build",
     "deploy": "ts-node scripts/deploy",
     "test": "jest"
   },

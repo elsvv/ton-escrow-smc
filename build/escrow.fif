@@ -1,0 +1,219 @@
+"Asm.fif" include
+// automatically generated from `main.fc` incl:`stdlib.fc` incl:`constants.fc` incl:`utils.fc` 
+PROGRAM{
+  DECLPROC send_msg
+  DECLPROC load_data
+  DECLPROC save_data
+  DECLPROC pack_guarantor_data
+  DECLPROC unpack_guarantor_data
+  DECLPROC recv_internal
+  DECLPROC recv_external
+  108001 DECLMETHOD get_info
+  send_msg PROCREF:<{
+    0 PUSHINT
+    16 PUSHINT
+    NEWC
+    6 STU
+    s0 s5 XCHG2
+    STSLICER
+    s0 s3 XCHG2
+    STGRAMS
+    s1 s3 XCHG
+    107 STU
+    s1 s2 XCHG
+    32 STU
+    ENDC
+    SWAP
+    SENDRAWMSG
+  }>
+  load_data PROCREF:<{
+    c4 PUSH
+    CTOS
+    1 LDU
+    LDGRAMS
+    LDMSGADDR
+    LDMSGADDR
+    64 LDU
+    LDREF
+    DROP
+  }>
+  save_data PROCINLINE:<{
+    1 PUSHINT
+    NEWC
+    1 STU
+    s0 s5 XCHG2
+    STGRAMS
+    s0 s3 XCHG2
+    STSLICER
+    SWAP
+    STSLICER
+    64 STU
+    STREF
+    ENDC
+    c4 POP
+  }>
+  pack_guarantor_data PROCREF:<{
+    NEWC
+    ROT
+    STSLICER
+    SWAP
+    STGRAMS
+    ENDC
+  }>
+  unpack_guarantor_data PROCREF:<{
+    CTOS
+    LDMSGADDR
+    LDGRAMS
+    DROP
+  }>
+  recv_internal PROC:<{
+    SWAP
+    CTOS
+    4 LDU
+    SWAP
+    1 PUSHINT
+    AND
+    0 THROWIF
+    load_data INLINECALLDICT
+    s0 s6 XCHG
+    LDMSGADDR
+    DROP
+    s0 s5 XCHG
+    IFNOTJMP:<{
+      s3 POP
+      s6 POP
+      s6 POP
+      s1 s5 XCPU
+      SDEQ
+      501 THROWIFNOT
+      s0 s2 XCHG
+      LDGRAMS
+      LDGRAMS
+      DROP
+      s0 s2 XCHG
+      unpack_guarantor_data INLINECALLDICT
+      DROP
+      ROT
+      pack_guarantor_data INLINECALLDICT
+      s1 s4 XCHG
+      s3 s3 s0 XCHG3
+      save_data INLINECALLDICT
+    }>
+    DROP
+    s0 s5 XCHG
+    32 LDU
+    OVER
+    10 EQINT
+    IFJMP:<{
+      s5 POP
+      3 BLKDROP
+      2 2 BLKDROP2
+      s2 POP
+      64 LDU
+      DROP
+      c4 PUSH
+      11 PUSHINT
+      0 PUSHINT
+      16 PUSHINT
+      NEWC
+      6 STU
+      s0 s5 XCHG2
+      STSLICER
+      s4 PUSH
+      STGRAMS
+      s1 s4 XCHG
+      107 STU
+      s1 s3 XCHG
+      32 STU
+      64 STU
+      STREF
+      ENDC
+      64 PUSHINT
+      SENDRAWMSG
+    }>
+    DROP
+    DUP
+    1 EQINT
+    IFJMP:<{
+      8 BLKDROP
+    }>
+    DUP
+    2 EQINT
+    IFJMP:<{
+      DROP
+      s5 POP
+      s0 s2 XCHG
+      unpack_guarantor_data INLINECALLDICT
+      s2 s1 XCPU
+      SDEQ
+      502 THROWIFNOT
+      s2 PUSH
+      20000000 PUSHINT
+      ADD
+      s1 s6 XCHG
+      LESS
+      503 THROWIF
+      TUCK
+      SUB
+      s1 s2 XCHG
+      22 PUSHINT
+      1 PUSHINT
+      send_msg INLINECALLDICT
+      DUP
+      IF:<{
+        s1 s2 XCHG
+        20 PUSHINT
+        1 PUSHINT
+        send_msg INLINECALLDICT
+      }>ELSE<{
+        DROP
+        NIP
+      }>
+      0 PUSHINT
+      21 PUSHINT
+      160 PUSHINT
+      send_msg INLINECALLDICT
+    }>
+    s2 POP
+    s6 POP
+    3 EQINT
+    IFJMP:<{
+      SWAP
+      unpack_guarantor_data INLINECALLDICT
+      DROP
+      TUCK
+      SDEQ
+      502 THROWIFNOT
+      s0 s2 XCHG
+      20000000 PUSHINT
+      GEQ
+      503 THROWIFNOT
+      SWAP
+      0 PUSHINT
+      30 PUSHINT
+      64 PUSHINT
+      send_msg INLINECALLDICT
+      1 PUSHINT
+      32 PUSHINT
+      OVER
+      send_msg INLINECALLDICT
+      0 PUSHINT
+      31 PUSHINT
+      160 PUSHINT
+      send_msg INLINECALLDICT
+    }>
+    5 BLKDROP
+    16 PUSHPOW2DEC
+    THROWANY
+  }>
+  recv_external PROC:<{
+    DROP
+  }>
+  get_info PROC:<{
+    load_data INLINECALLDICT
+    unpack_guarantor_data INLINECALLDICT
+    s2 s4 XCHG
+    s2 s3 XCHG
+  }>
+}END>c
+

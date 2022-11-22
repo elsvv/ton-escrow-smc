@@ -50,10 +50,10 @@ yarn
 yarn test
 ```
 
-### Compile and print an actual code BOC:
+### Compile code and print an actual base64 code BOC:
 
 ```sh
-yarn compile
+yarn build
 ```
 
 ---
