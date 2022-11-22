@@ -1,4 +1,5 @@
 import { writeFileSync } from "fs";
+import { join } from "path";
 
 import { compileEscrowCode } from "../src/Escrow.source";
 
@@ -10,11 +11,13 @@ if (require.main === module) {
       console.log("Smart contract code BOC:");
       console.log(result.codeBoc);
 
+      const buildBolder = join(__dirname, "..", "build");
+
       const fiftCellSource = '"Asm.fif" include\n' + result?.fiftCode + "\n";
-      writeFileSync("build/escrow.fif", fiftCellSource.replace(/\\n/g, "\n"), "utf8");
+      writeFileSync(join(buildBolder, "escrow.fif"), fiftCellSource.replace(/\\n/g, "\n"), "utf8");
       console.log("Fift code was wrote to build/escrow.fif");
 
-      writeFileSync("build/escrow.cell", Buffer.from(result.codeBoc, "base64"));
+      writeFileSync(join(buildBolder, "escrow.cell"), Buffer.from(result.codeBoc, "base64"));
       console.log("Raw cell was wrote to build/escrow.cell");
     })
     .catch((e) => {
