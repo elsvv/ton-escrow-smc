@@ -15,10 +15,10 @@ if (require.main === module) {
 
       const fiftCellSource = '"Asm.fif" include\n' + result?.fiftCode + "\n";
       writeFileSync(join(buildBolder, "escrow.fif"), fiftCellSource.replace(/\\n/g, "\n"), "utf8");
-      console.log("Fift code was wrote to build/escrow.fif");
+      console.log("Fift code has been saved to build/escrow.fif");
 
       writeFileSync(join(buildBolder, "escrow.cell"), Buffer.from(result.codeBoc, "base64"));
-      console.log("Raw cell was wrote to build/escrow.cell");
+      console.log("Raw cell has been saved to build/escrow.cell");
     })
     .catch((e) => {
       console.warn("Compilation error:");
